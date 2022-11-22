@@ -11,6 +11,9 @@ plugins {
     // Apply the org.jetbrains.kotlin.jvm Plugin to add support for Kotlin.
     id("org.jetbrains.kotlin.jvm") version "1.7.21"
 
+    // Apply the org.jetbrains.kotlinx.kover Plugin to add support for Kotlin Kover
+    id("org.jetbrains.kotlinx.kover") version "0.6.1"
+
     // Apply the java-library plugin for API and implementation separation.
     `java-library`
 }
@@ -40,6 +43,101 @@ testing {
         val test by getting(JvmTestSuite::class) {
             // Use Kotlin Test test framework
             useKotlinTest()
+        }
+    }
+}
+
+kover {
+    // true to disable instrumentation and all Kover tasks in this project
+    isDisabled.set(false)
+
+    // to change engine, use kotlinx.kover.api.IntellijEngine("xxx") or kotlinx.kover.api.JacocoEngine("xxx")
+    engine.set(kotlinx.kover.api.DefaultJacocoEngine)
+
+    // common filters for all default Kover tasks
+    filters {
+        // common class filter for all default Kover tasks in this project
+        classes {
+            // class inclusion rules
+            includes += "xyz.blokkontrol.*"
+            // class exclusion rules
+            excludes += listOf("com.example.subpackage.*")
+        }
+
+        // common annotation filter for all default Kover tasks in this project
+        annotations {
+            // exclude declarations marked by specified annotations
+            excludes += listOf("com.example.Annotation", "*Generated")
+        }
+    }
+
+    instrumentation {
+        // set of test tasks names to exclude from instrumentation. The results of their execution will not be presented in the report
+        excludeTasks += "dummy-tests"
+    }
+
+    htmlReport {
+        // set to true to run koverHtmlReport task during the execution of the check task (if it exists) of the current project
+        onCheck.set(true)
+
+        // change report directory
+        reportDir.set(layout.buildDirectory.dir("my-project-report/html-result"))
+        overrideFilters {
+            // override common class filter
+            classes {
+                // class inclusion rules
+                includes += "xyz.blokkontrol.*"
+                // override class exclusion rules
+                excludes += listOf("com.example2.subpackage.*")
+            }
+            // override common annotation filter for HTML report (filtering will take place only by the annotations specified here)
+            annotations {
+                excludes += listOf("com.example2.Annotation")
+            }
+        }
+    }
+
+    verify {
+        // set to true to run koverVerify task during the execution of the check task (if it exists) of the current project
+        onCheck.set(true)
+
+        // add verification rule
+        rule {
+            // set to false to disable rule checking
+            isEnabled = true
+
+            // custom name for the rule
+            name = "General Koverage"
+
+            // specify by which entity the code for separate coverage evaluation will be grouped
+            target = kotlinx.kover.api.VerificationTarget.ALL
+
+            // override common class filter
+            overrideClassFilter {
+                // override class inclusion rules
+                includes += "com.example.verify.*"
+
+                // override class exclusion rules
+                excludes += listOf("com.example.verify.subpackage.*")
+            }
+
+            // override common annotation filter (filtering will take place only by the annotations specified here)
+            overrideAnnotationFilter {
+                // declarations marked only by these annotations will be excluded from this rule
+                excludes += "*verify.*Generated"
+            }
+
+            // add rule bound
+            bound {
+                minValue = 99
+                maxValue = 100
+
+                // change coverage metric to evaluate (LINE, INSTRUCTION, BRANCH)
+                counter = kotlinx.kover.api.CounterType.LINE
+
+                // change counter value (COVERED_COUNT, MISSED_COUNT, COVERED_PERCENTAGE, MISSED_PERCENTAGE)
+                valueType = kotlinx.kover.api.VerificationValueType.COVERED_PERCENTAGE
+            }
         }
     }
 }
